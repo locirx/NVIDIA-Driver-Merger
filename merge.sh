@@ -2,8 +2,8 @@
 
 BASEDIR=$(dirname $0)
 
-VGPU="NVIDIA-Linux-x86_64-x.y.z-vgpu-kvm"
-GNRL="NVIDIA-Linux-x86_64-x.y.z"
+VGPU="NVIDIA-Linux-x86_64-580.178.05-vgpu-kvm"
+GNRL="NVIDIA-Linux-x86_64-580.178.04"
 
 VER_VGPU=`echo ${VGPU} | awk -F- '{print $4}'`
 VER_GNRL=`echo ${GNRL} | awk -F- '{print $4}'`
