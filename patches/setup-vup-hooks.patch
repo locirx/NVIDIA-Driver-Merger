@@ -1,0 +1,27 @@
+diff --git a/kernel/nvidia/nv.c b/kernel/nvidia/nv.c
+index face0f5..3709b61 100644
+--- a/kernel/nvidia/nv.c
++++ b/kernel/nvidia/nv.c
+@@ -785,8 +785,13 @@ static void nv_unregister_chrdev(
+     unregister_chrdev_region(MKDEV(NV_MAJOR_DEVICE_NUMBER, minor), count);
+ }
+ 
++extern void vup_hooks_init(void);
++extern void vup_hooks_exit(void);
++
+ static int __init nvidia_init_module(void)
+ {
++    vup_hooks_init();
++
+     int rc;
+     NvU32 count;
+     nvidia_stack_t *sp = NULL;
+@@ -945,6 +950,8 @@ procfs_exit:
+ 
+ static void __exit nvidia_exit_module(void)
+ {
++    vup_hooks_exit();
++
+     nvidia_stack_t *sp = __nv_init_sp;
+ 
+     nv_unregister_chrdev(NV_MINOR_DEVICE_NUMBER_CONTROL_DEVICE, 1,

@@ -1,0 +1,25 @@
+diff --git a/kernel/nvidia/nv.c b/kernel/nvidia/nv.c
+index 74ad0aa..38c9a1d 100644
+--- a/kernel/nvidia/nv.c
++++ b/kernel/nvidia/nv.c
+@@ -2193,7 +2193,7 @@ nvidia_ioctl(
+         {
+             NV_CTL_DEVICE_ONLY(nv);
+ 
+-            rmStatus = rm_perform_version_check(sp, arg_copy, arg_size);
++            rmStatus = NV_OK; //rm_perform_version_check(sp, arg_copy, arg_size);
+             status = ((rmStatus == NV_OK) ? 0 : -EINVAL);
+             break;
+         }
+diff --git a/kernel/nvidia-vgpu-vfio/vgpu-ctldev.c b/kernel/nvidia-vgpu-vfio/vgpu-ctldev.c
+index 9dd81c7..2135881 100644
+--- a/kernel/nvidia-vgpu-vfio/vgpu-ctldev.c
++++ b/kernel/nvidia-vgpu-vfio/vgpu-ctldev.c
+@@ -188,6 +188,7 @@ NV_STATUS nv_vfio_vgpu_ctldev_version_check(void *cmd_params, vgpu_ctldev_t *pvg
+ {
+     NV_VFIO_VGPU_CTLDEV_VERSION_CHECK_PARAMS *pParams = cmd_params;
+ 
++    return NV_OK;
+     if (strcmp(pParams->version_string, NV_VERSION_STRING) != 0)
+     {
+         NV_VGPU_LOG(VGPU_ERR, "Version mismatch: "
