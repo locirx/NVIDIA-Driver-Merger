@@ -1,0 +1,12 @@
+[Unit]
+Description=Create NVIDIA device nodes before LXC start
+After=nvidia-vgpud.service nvidia-vgpu-mgr.service
+Before=pve-container@.service lxc.service pve-guests.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/nvidia-smi -L
+ExecStart=/usr/bin/nvidia-modprobe -m
+
+[Install]
+WantedBy=multi-user.target

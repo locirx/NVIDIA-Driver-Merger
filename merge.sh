@@ -119,7 +119,7 @@ ZSTD=true
 
 if $PATCH; then
     for cmd in cargo patchelf; do
-        command -v "$cmd" &> /dev/null || die "$cmd not found"
+        command -v "$cmd" &>/dev/null || die "$cmd not found"
     done
 elif $REPACK; then
     command -v zstd || ZSTD=false
@@ -207,6 +207,11 @@ BLOB_SIZE=$(size -Ax ${TARGET}/kernel/nvidia/nv-kernel.o_binary | awk '$1==".tex
 sed -e '/^NVIDIA_CFLAGS += .*BIT_MACROS$/aNVIDIA_CFLAGS += -DBLOB_TEXT_SIZE='"${BLOB_SIZE}" -i ${TARGET}/kernel/nvidia/nvidia.Kbuild
 $IS_GNRL_LWR && sed -i "s/^\([[:space:]]*\.versionString = \)NV_VERSION_STRING,/\1\"${VER_GNRL}\",/" ${TARGET}/kernel/nvidia-drm/nvidia-drm.c
 blobpatch ${TARGET}/libnvidia-ml.so.${VER_HGR} "$BASEDIR/patches/libnvidia-ml.so.${VER_HGR}.diff"
+
+cp -p "$BASEDIR/patches/nvidia-dev-init.service" ${TARGET}/systemd/system
+sed -i "$(grep -n 'SYSTEMD_UNIT_SYMLINK' ${TARGET}/.manifest | tail -n1 | cut -d: -f1)a\\
+systemd/system/nvidia-dev-init.service 0444 SYSTEMD_UNIT MODULE:installer\\
+nvidia-dev-init.service 0000 SYSTEMD_UNIT_SYMLINK multi-user.target.wants MODULE:installer" ${TARGET}/.manifest
 echo "DONE"
 
 # ===== FINALIZE =====
