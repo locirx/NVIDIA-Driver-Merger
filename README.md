@@ -59,11 +59,18 @@ The main behavior of `merge.sh` is to merge the two drivers, but it can also do 
 ```
 
 ## Extra
+### CUDA
 By default, CUDA is enabled in the merged driver.
 If for whatever reason this needs to be changed, it can be done at boot time by making a custom boot entry, or using `modprobe` by editing `/etc/modprobe.d/cuda.conf` to contain:
 ```text
 options nvidia cuda=0
 ```
+
+### LXC containers
+For LXC containers to correctly use the GPU's CUDA features (and consequently NVDEC and NVENC), the device nodes must be created before the first container starts. \
+To solve this, and to avoid doing it manually when containers are configured to start at boot, this script adds a systemd service that creates the device nodes automatically.
+> [!NOTE]
+> The service was created for Proxmox. On a different host OS, check that `/usr/lib/systemd/system/nvidia-dev-init.service` is compatible with your system.
 
 ## Troubleshooting
 For any type of support needed, join the [Discord server](https://discord.gg/5rQsSV3Byq).
