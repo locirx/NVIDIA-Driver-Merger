@@ -1,31 +1,70 @@
 8213bf6a9d50e2d3bc44f2cbbef733c0de15e137ee94f0c1007140e90f57666a
 
 # Unconditionally return the NVML's version as the driver version, making merged builds work.
-# Replace bytes at `nvmlSystemGetDriverVersion` as follows:
-# - `lea rsi, ...`
+# Replace the start of `nvmlSystemGetDriverVersion(char *version, unsigned int length)` with a
+# self-contained stub. It keeps the NVML error contract of the original function, makes no calls,
+# and writes at most 11 bytes. The stub is 45 bytes and ends on an original instruction boundary (0x4A2ED);
+# the rest of the original function becomes unreachable (no branch from outside the function enters it).
+# Previous revision: `lea rsi, "580.178.05"; call strcpy; xor eax, eax; ret`. That ignored `length`
+# (heap/stack overflow for a caller buffer shorter than 11 bytes) and called strcpy with a misaligned stack.
+# - `test rdi, rdi` - is `version` NULL?
 0004A2C0: 55 48
-0004A2C1: 48 8D
-0004A2C2: 89 35
-# - Obtain the relative, positive offset to the (valid) driver version within the NVML version string with
-#   `(idc.get_name_ea_simple("nptr") + 3) - idc.get_name_ea_simple("nvmlSystemGetDriverVersion") - 7`.
-0004A2C3: E5 8A
-0004A2C4: 41 42
-0004A2C5: 56 15
-0004A2C6: 41 00
-# - `call ...`
-0004A2C7: 89 E8
-# - Obtain the relative, negative offset to the `_strcpy` function with
-#   `0x100000000 - idc.get_name_ea_simple("nvmlSystemGetDriverVersion") - 7 + ida_xref.get_first_cref_to(idc.get_name_ea_simple("strcpy")) - 5`.
-0004A2C8: F6 64
-0004A2C9: 41 0E
-0004A2CA: 55 FD
-0004A2CB: 49 FF
-# - `xor eax, eax`
-0004A2CC: 89 31
-0004A2CD: FD C0
+0004A2C1: 48 85
+0004A2C2: 89 FF
+# - `je` to the NVML_ERROR_INVALID_ARGUMENT return below
+0004A2C3: E5 74
+0004A2C4: 41 1C
+# - `cmp esi, 11` - is `length` at least strlen("580.178.05") + 1?
+0004A2C5: 56 83
+0004A2C6: 41 FE
+0004A2C7: 89 0B
+# - `jb` to the NVML_ERROR_INSUFFICIENT_SIZE return below
+0004A2C8: F6 72
+0004A2C9: 41 1D
+# - `movabs rax, 0x2E3837312E303835` - the bytes "580.178."
+0004A2CA: 55 48
+0004A2CB: 49 B8
+0004A2CC: 89 35
+0004A2CD: FD 38
+0004A2CE: 41 30
+0004A2CF: 54 2E
+0004A2D0: 53 31
+0004A2D1: 48 37
+0004A2D2: 83 38
+0004A2D3: EC 2E
+# - `mov [rdi], rax` - write version[0..7]
+0004A2D4: 10 48
+0004A2D5: 48 89
+0004A2D6: 8D 07
+# - `mov dword [rdi+7], 0x0035302E` - write ".05\0" to version[7..10]
+0004A2D7: 1D C7
+0004A2D8: 5C 47
+0004A2D9: AA 07
+0004A2DA: F3 2E
+0004A2DB: 00 30
+0004A2DC: 83 35
+0004A2DD: 3B 00
+# - `xor eax, eax` - NVML_SUCCESS
+0004A2DE: 04 31
+0004A2DF: 0F C0
 # - `ret`
-0004A2CE: 41 C3
-0004A2CF: 54 90
+0004A2E0: 8F C3
+# - `mov eax, 2` - NVML_ERROR_INVALID_ARGUMENT
+0004A2E1: C3 B8
+0004A2E2: 00 02
+0004A2E3: 00 00
+0004A2E4: 00 00
+0004A2E5: E8 00
+# - `ret`
+0004A2E6: B6 C3
+# - `mov eax, 7` - NVML_ERROR_INSUFFICIENT_SIZE
+0004A2E7: 1B B8
+0004A2E8: FD 07
+0004A2E9: FF 00
+0004A2EA: 41 00
+0004A2EB: 89 00
+# - `ret`
+0004A2EC: C4 C3
 
 # From: NULLderef <NULLderef@localhost.localdomain>
 # Subject: [PATCH] fix nvidia-smi process list in merged driver
@@ -34,4 +73,4 @@
 # and skip the code block that returns `*a5 = 1`, `*a4 = 0xA082`.
 000AB92F: 74 EB
 
-519fb7185011b16bd338b4be3aea7e169417f2eddcc9b352ee866262c39ba2ac
+f2fa9da9e1a7cadbd7238fee6e0323d357e01c0485399b21e6169f62f89d0884
