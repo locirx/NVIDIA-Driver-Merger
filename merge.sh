@@ -29,37 +29,6 @@ MRGD="NVIDIA-Linux-x86_64-${VER_HGR}-merged"
 TARGET="${MRGD}"
 
 
-# ===== OPTIONS =====
-PATCH=false
-REPACK=false
-CLEAN=true
-VERBOSE=false
-while [ $# -gt 0 ]
-do
-    case "$1" in
-        -p|--patch)
-            PATCH=true
-            TARGET="${MRGD}-patched"
-            shift
-            ;;
-        -r|--repack)
-            REPACK=true
-            shift
-            ;;
-        -v|--verbose)
-            VERBOSE=true
-            shift
-            ;;
-        -k|--keep-directories)
-            CLEAN=false
-            shift
-            ;;
-        *)
-            die "Unknown option $1"
-            ;;
-    esac
-done
-
 # ===== FUNCTIONS =====
 die() {
     echo "$@"
@@ -113,6 +82,37 @@ applypatch() {
     patch -d ${1} -p1 --no-backup-if-mismatch -f -s < "$BASEDIR/patches/${2}"
     return $?
 }
+
+# ===== OPTIONS =====
+PATCH=false
+REPACK=false
+CLEAN=true
+VERBOSE=false
+while [ $# -gt 0 ]
+do
+    case "$1" in
+        -p|--patch)
+            PATCH=true
+            TARGET="${MRGD}-patched"
+            shift
+            ;;
+        -r|--repack)
+            REPACK=true
+            shift
+            ;;
+        -v|--verbose)
+            VERBOSE=true
+            shift
+            ;;
+        -k|--keep-directories)
+            CLEAN=false
+            shift
+            ;;
+        *)
+            die "Unknown option $1"
+            ;;
+    esac
+done
 
 # ===== REQUIREMENTS =====
 ZSTD=true
