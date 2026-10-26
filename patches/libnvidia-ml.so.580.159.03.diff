@@ -1,31 +1,24 @@
 a610e3e6a9ebb901372dcd2b912a7a040c35406ced930290dd902b3fbf1c797c
 
 # Unconditionally return the NVML's version as the driver version, making merged builds work.
-# Replace bytes at `nvmlSystemGetDriverVersion` as follows:
-# - `lea rsi, ...`
-0004A2C0: 55 48
-0004A2C1: 48 8D
-0004A2C2: 89 35
-# - Obtain the relative, positive offset to the (valid) driver version within the NVML version string with
-#   `(idc.get_name_ea_simple("nptr") + 3) - idc.get_name_ea_simple("nvmlSystemGetDriverVersion") - 7`.
-0004A2C3: E5 8A
-0004A2C4: 41 42
-0004A2C5: 56 15
-0004A2C6: 41 00
-# - `call ...`
-0004A2C7: 89 E8
-# - Obtain the relative, negative offset to the `_strcpy` function with
-#   `0x100000000 - idc.get_name_ea_simple("nvmlSystemGetDriverVersion") - 7 + ida_xref.get_first_cref_to(idc.get_name_ea_simple("strcpy")) - 5`.
-0004A2C8: F6 64
-0004A2C9: 41 0E
-0004A2CA: 55 FD
-0004A2CB: 49 FF
-# - `xor eax, eax`
-0004A2CC: 89 31
-0004A2CD: FD C0
-# - `ret`
-0004A2CE: 41 C3
-0004A2CF: 54 90
+# Patch: make `strncpy(g_driverVersion, ..., 31)` copy the hardcoded
+# version string instead of the one returned by the RM.
+000A8BBC: 48 48
+000A8BBD: 8B 8D
+000A8BBE: B5 35
+000A8BBF: C8 9D
+000A8BC0: FE 41
+000A8BC1: FF 13
+000A8BC2: FF 00
+# Cosmetic: make the DEBUG log print the same hardcoded version string.
+# Only visible when running with `__NVML_DBG_LVL=DEBUG`.
+000A8BEF: 4C 4C
+000A8BF0: 8B 8D
+000A8BF1: AD 2D
+000A8BF2: C8 6A
+000A8BF3: FE 41
+000A8BF4: FF 13
+000A8BF5: FF 00
 
 # From: NULLderef <NULLderef@localhost.localdomain>
 # Subject: [PATCH] fix nvidia-smi process list in merged driver
@@ -34,4 +27,4 @@ a610e3e6a9ebb901372dcd2b912a7a040c35406ced930290dd902b3fbf1c797c
 # and skip the code block that returns `*a5 = 1`, `*a4 = 0xA082`.
 000AB8EF: 74 EB
 
-7a3b7bda67162a9af23f2401ce25b39529d259862ba4284fa4b945b7f16befad
+b2ab7fc28aebf7551359e238739f11ba9a9f4ab3dbc187e67e9f0ecba3b9d1d6
