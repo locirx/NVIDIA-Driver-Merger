@@ -15,11 +15,11 @@ In addition to the above:
 ## Requirements
 In order to run this script it is necessary to have installed:
 - `patch`
-- `binutils`, which provides the `objcopy` and `size` utilities
+- `binutils`, which provides the `objcopy`, `readelf` and `size` utilities
+- `patchelf`
 
 Other than the ones listed above, you may also need:
 - if you need to unlock the driver (via the `-p`/`--patch` option):
-    - `patchelf`
     - `cargo` (if installed without using your distribution's package manager, `gcc` is also required)
 - if you need to repack the driver (via the `-r`/`--repack` option):
     - `zstd` (this is not required but highly recommended to reduce the final _.run_ file size)
