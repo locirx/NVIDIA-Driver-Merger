@@ -117,10 +117,12 @@ done
 # ===== REQUIREMENTS =====
 ZSTD=true
 
+for cmd in readelf patchelf; do
+    command -v "$cmd" &>/dev/null || die "$cmd not found"
+done
+
 if $PATCH; then
-    for cmd in cargo patchelf; do
-        command -v "$cmd" &>/dev/null || die "$cmd not found"
-    done
+    command -v cargo &>/dev/null || die "cargo not found"
 elif $REPACK; then
     command -v zstd || ZSTD=false
 fi
@@ -151,7 +153,25 @@ else
 fi
 echo "DONE"
 
-echo -n "Merging .manifest file..."
+echo -n "Renaming libraries..."
+find ${MRGD} -type f -name "*.so.$VER_LWR" | while IFS= read -r oldF; do
+  newF="${oldF%$VER_LWR}$VER_HGR"
+  mv "$oldF" "$newF"
+  if readelf -dW "$newF" | grep -F '(SONAME)' | grep -qF "$VER_LWR"; then
+    patchelf --set-soname "${newF##*/}" "$newF"
+  fi
+done
+
+find ${MRGD} -type f \( -perm -u+x -o -name "*.so.$VER_HGR" \) | while IFS= read -r file; do
+  readelf -dW "$file" 2>/dev/null | grep -F '(NEEDED)' | grep -F "$VER_LWR" | while IFS= read -r oldL; do
+    oldL=$(echo "$oldL" | sed -E 's/.*\[(.*)\]/\1/')
+    newL="${oldL%$VER_LWR}$VER_HGR"
+    patchelf --replace-needed "$oldL" "$newL" "$file"
+  done
+done
+echo "DONE"
+
+echo -n "Merging .manifest and sandboxutils-filelist.json files..."
 sed -i "s/^${VER_LWR}$/${VER_HGR}/" ${MRGD}/.manifest
 sed -i '/^nvidia .*nvidia-drm/s/  / nvidia-vgpu-vfio /' ${MRGD}/.manifest
 diff -u ${VGPU}/.manifest ${GNRL}/.manifest \
@@ -162,9 +182,7 @@ diff -u ${VGPU}/.manifest ${GNRL}/.manifest \
 sed -f manifest-merge.sed -i ${MRGD}/.manifest
 sed -i "/libnvidia-ml/{/NATIVE/s/${VER_LWR}/${VER_HGR}/g}" ${MRGD}/.manifest
 rm manifest-merge.sed
-echo "DONE"
 
-echo -n "Merging sandboxutils-filelist.json file..."
 sed -i "0,/libnvidia-ml\.so\.[0-9.]\+/s//libnvidia-ml.so.${VER_HGR}/" ${MRGD}/sandboxutils-filelist.json
 cat ${VGPU}/sandboxutils-filelist.json \
 | sed -n -e '/"libnvidia-vgpu.so./{x;p;x}' -e 'h' -e '/"libnvidia-vgpu.so./,$p' \
@@ -173,9 +191,10 @@ JSON_MERGE=$(sed -e 's:$:\\n:' json-merge.json | tr -d '\n')
 sed -i ':a;N;$!ba;s|\( *{\n[^\n]*"libcuda\.so\..*$\)|'"${JSON_MERGE}"'\1|' ${MRGD}/sandboxutils-filelist.json
 rm json-merge.json
 
+sed -i "s/\.${VER_LWR//./\\.}/.${VER_HGR}/g" ${MRGD}/{.manifest,sandboxutils-filelist.json}
+
 applypatch ${MRGD} disable-nvidia-blob-version-check.patch
 echo "${MRGD}: Merged ${LWR} & ${HGR} drivers\n" >> ${MRGD}/pkg-history.txt
-
 echo "DONE"
 
 # ===== UNLOCK =====
