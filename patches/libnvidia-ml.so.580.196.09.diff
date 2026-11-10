@@ -1,0 +1,30 @@
+9eb5c474912f713cb9645cd7dea7471cea411c10e6e4531f2cdaef5eeb392b81
+
+# Unconditionally return the NVML's version as the driver version, making merged builds work.
+# Patch: make `strncpy(g_driverVersion, ..., 31)` copy the hardcoded
+# version string instead of the one returned by the RM.
+000A8AAC: 48 48
+000A8AAD: 8B 8D
+000A8AAE: B5 35
+000A8AAF: C8 8D
+000A8AB0: FE 43
+000A8AB1: FF 13
+000A8AB2: FF 00
+# Cosmetic: make the DEBUG log print the same hardcoded version string.
+# Only visible when running with `__NVML_DBG_LVL=DEBUG`.
+000A8ADF: 4C 4C
+000A8AE0: 8B 8D
+000A8AE1: AD 2D
+000A8AE2: C8 5A
+000A8AE3: FE 43
+000A8AE4: FF 13
+000A8AE5: FF 00
+
+# From: NULLderef <NULLderef@localhost.localdomain>
+# Subject: [PATCH] fix nvidia-smi process list in merged driver
+#
+# Identify `cConvertNvmlProcessInfoModeToRmId` using the debug strings,
+# and skip the code block that returns `*a5 = 1`, `*a4 = 0xA082`.
+000AB7DF: 74 EB
+
+27ca220e6c4657ee8bfaa250525d329577e88486ea5e09e6db95121bbc71ff4e
