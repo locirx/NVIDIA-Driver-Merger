@@ -153,23 +153,44 @@ else
 fi
 echo "DONE"
 
-echo -n "Renaming libraries..."
+echo -n "Updating libraries..."
 find ${MRGD} -type f -name "*.so.$VER_LWR" | while IFS= read -r oldF; do
-  newF="${oldF%$VER_LWR}$VER_HGR"
-  mv "$oldF" "$newF"
-  if readelf -dW "$newF" | grep -F '(SONAME)' | grep -qF "$VER_LWR"; then
-    patchelf --set-soname "${newF##*/}" "$newF"
-  fi
+    newF="${oldF%$VER_LWR}$VER_HGR"
+    mv "$oldF" "$newF"
+    if readelf -dW "$newF" | grep -F '(SONAME)' | grep -qF "$VER_LWR"; then
+        patchelf --set-soname "${newF##*/}" "$newF"
+    fi
 done
 
 find ${MRGD} -type f \( -perm -u+x -o -name "*.so.$VER_HGR" \) | while IFS= read -r file; do
-  readelf -dW "$file" 2>/dev/null | grep -F '(NEEDED)' | grep -F "$VER_LWR" | while IFS= read -r oldL; do
-    oldL=$(echo "$oldL" | sed -E 's/.*\[(.*)\]/\1/')
-    newL="${oldL%$VER_LWR}$VER_HGR"
-    patchelf --replace-needed "$oldL" "$newL" "$file"
-  done
+    readelf -dW "$file" 2>/dev/null | grep -F '(NEEDED)' | grep -F "$VER_LWR" | while IFS= read -r oldL; do
+        oldL=$(echo "$oldL" | sed -E 's/.*\[(.*)\]/\1/')
+        newL="${oldL%$VER_LWR}$VER_HGR"
+        patchelf --replace-needed "$oldL" "$newL" "$file"
+    done
 done
-echo "DONE"
+
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+if [ ${#VER_LWR} -eq ${#VER_HGR} ]; then
+    grep -rlaE "\.so\.${VER_LWR//./\\.}" ${MRGD} | while IFS= read -r file; do
+        [ "$(head -c4 "$file")" = $'\x7fELF' ] || continue
+        objcopy --dump-section .rodata="$tmp" "$file" /dev/null || continue
+        grep -qaE "\.so\.${VER_LWR//./\\.}" "$tmp" || continue
+        LC_ALL=C sed -i "s/\(\.so\.\)${VER_LWR//./\\.}/\1${VER_HGR}/g" "$tmp"
+        objcopy --update-section .rodata="$tmp" "$file"
+    done
+    echo "DONE"
+else
+    cat <<EOF
+PARTIAL
+---------------
+The generic (${VER_LWR}) and vGPU (${VER_HGR}) driver versions have different lengths.
+Skipping the '.rodata' patch: this may cause errors.
+See https://github.com/locirx/NVIDIA-Driver-Merger/issues/2 for more info.
+---------------
+EOF
+fi
 
 echo -n "Merging .manifest and sandboxutils-filelist.json files..."
 sed -i "s/^${VER_LWR}$/${VER_HGR}/" ${MRGD}/.manifest
